@@ -1,0 +1,12 @@
+services:
+  sonarqube:
+    image: sonarqube:lts-community
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+
+  nexus:
+    image: sonatype/nexus3:latest
+    ports:
+      - "8081:8081"
