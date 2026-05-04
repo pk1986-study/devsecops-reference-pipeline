@@ -1,0 +1,128 @@
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+  }
+
+  environment {
+    // Dummy image just for Docker/Nexus login validation
+    TEST_IMAGE = "hello-world:latest"
+  }
+
+  stages {
+
+    stage('Basic Environment Check') {
+      steps {
+        sh '''
+          echo "==== Running as user ===="
+          whoami
+
+          echo "==== OS Details ===="
+          cat /etc/os-release
+
+          echo "==== Java Check ===="
+          java -version
+
+          echo "==== Maven Check ===="
+          mvn -version
+
+          echo "==== Docker Check ===="
+          docker --version
+          docker ps
+
+          echo "==== Trivy Check ===="
+          trivy --version
+
+          echo "==== Snyk Check ===="
+          snyk --version
+        '''
+      }
+    }
+
+    stage('SonarQube Connectivity & Token Validation') {
+    steps {
+        withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+            sh '''
+            echo "Checking SonarQube authentication..."
+
+            RESPONSE=$(curl -u sqa_fefd7711556213bd70b320c06635c87bf58464b8: http://13.206.144.67:9000/api/authentication/validate)
+
+            echo $RESPONSE
+
+            echo $RESPONSE | grep -q '"valid":true' \
+                && echo "✅ SonarQube authentication successful" \
+                || (echo "❌ SonarQube authentication FAILED" && exit 1)
+            '''
+        }
+    }
+}
+
+    stage('Snyk Token Validation') {
+      steps {
+        withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+          sh '''
+            echo "✅ Snyk token is accessible to Jenkins"
+
+            snyk auth $SNYK_TOKEN
+
+            echo "✅ Snyk authentication successful"
+          '''
+        }
+      }
+    }
+
+    stage('Docker Daemon Validation') {
+      steps {
+        sh '''
+          echo "Pulling test Docker image..."
+          docker pull $TEST_IMAGE
+          docker images | grep hello-world
+        '''
+      }
+    }
+
+    stage('Trivy Image Scan Validation') {
+      steps {
+        sh '''
+          echo "Running Trivy scan on test image..."
+          trivy image --severity HIGH,CRITICAL $TEST_IMAGE || true
+          echo "✅ Trivy scan executed"
+        '''
+      }
+    }
+
+    stage('Nexus Docker Credentials Validation') {
+      steps {
+        withCredentials([usernamePassword(
+          credentialsId: 'nexus-docker-creds',
+          usernameVariable: 'NEXUS_USER',
+          passwordVariable: 'NEXUS_PASS'
+        )]) {
+          sh '''
+            echo "✅ Nexus credentials pulled from Jenkins"
+
+            echo "$NEXUS_PASS" | docker login 13.206.144.67:8082/ \
+              -u "$NEXUS_USER" --password-stdin
+
+            echo "✅ Docker login to Nexus successful"
+
+            docker logout http://13.206.144.67:8082/
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      echo "✅ ALL TOOLS AND CREDENTIALS VERIFIED SUCCESSFULLY"
+    }
+    failure {
+      echo "❌ TOOL OR CREDENTIAL VALIDATION FAILED – CHECK STAGE LOGS"
+    }
+    always {
+      sh 'docker system prune -f || true'
+    }
+  }
+}
