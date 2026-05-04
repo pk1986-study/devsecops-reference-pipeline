@@ -13,7 +13,7 @@ pipeline {
     CONTAINER_PORT  = "5000"
     SONARQUBE_SERVER= "SonarQube"           // Jenkins global config name
     // Nexus example: http(s)://nexus.company.com:8082
-    NEXUS_DOCKER_REGISTRY = "http://192.168.29.55:8081/"
+    NEXUS_DOCKER_REGISTRY = "http://13.206.144.67:8081//"
     NEXUS_REPO      = "docker-hosted"
   }
 
