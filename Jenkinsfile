@@ -29,7 +29,7 @@ pipeline {
           python3 -m venv .venv
           . .venv/bin/activate
           pip install -r app/requirements.txt
-          export PYTHONPATH=$WORKSPACE
+          export PYTHONPATH="$WORKSPACE"
           pytest -q
         """
       }
