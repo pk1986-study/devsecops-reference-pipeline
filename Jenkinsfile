@@ -1,9 +1,7 @@
 pipeline {
   agent any
 
- tools {
-  sonarRunner 'SQ1'
-}
+
 
   options {
     timestamps()
