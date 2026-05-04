@@ -1,10 +1,9 @@
 pipeline {
   agent any
 
-  tools {
-    // Configure in Jenkins → Global Tool Configuration
-    sonarScanner 'SonarScanner'
-  }
+ tools {
+  sonarRunner 'SonarScanner'
+}
 
   options {
     timestamps()
